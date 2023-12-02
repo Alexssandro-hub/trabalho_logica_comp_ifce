@@ -1,66 +1,69 @@
 import numpy as np
 from z3 import *
-from pysat.solvers import Glucose3
 
-def create_tower_formula(dimensions, configuration):
+def solve_tower_problem(dimensions, configuration):
     rows, cols = dimensions
-    clauses = []
+    s = Solver()
 
+    # Criação de uma matriz NumPy para representar as orientações dos canhões
+    tower_cannons = [[Int(f'tower_{i}_{j}_{dir}') for dir in ['c', 'b', 'd', 'e']] for j in range(cols) for i in range(rows) if configuration[i][j] == 'T']
+
+    # Restrições
     for i in range(rows):
         for j in range(cols):
             if configuration[i][j] == 'T':
-                index = f'tower_{i}_{j}'
-
+                index = [(i * cols + j) * 4 + k for k in range(4) if (i * cols + j) * 4 + k < len(tower_cannons)]  # Índices para as variáveis do canhão desta torre
+                
                 # Cada torre tem exatamente quatro canhões (cima, baixo, direita, esquerda)
-                clauses.append([f'{index}_c', f'{index}_b', f'{index}_d', f'{index}_e'])
+                for k, dir in enumerate(['c', 'b', 'd', 'e']):
+                    if index and index[0] + k < len(tower_cannons):
+                        s.add(tower_cannons[index[0] + k][dir] >= 1, tower_cannons[index[0] + k][dir] <= 4)
 
                 # Cada configuração de tiro deve eliminar pelo menos um atacante
-                clauses.append([f'{index}_c', f'{index}_d', f'n_{i}_{j}'])
-                clauses.append([f'{index}_d', f'{index}_e', f'n_{i}_{j}'])
-                clauses.append([f'{index}_e', f'{index}_c', f'n_{i}_{j}'])
-                clauses.append([f'{index}_b', f'{index}_c', f'n_{i}_{j}'])
+                attacker_eliminated = Or(
+                    And(configuration[i][j] == 'n', Or([tower_cannons[index[0] + k][dir] == k for k, dir in zip([2, 2], ['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
+                    And(configuration[i][j] == 'n', Or([tower_cannons[index[0] + k][dir] == k for k, dir in zip([3, 3], ['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
+                    And(configuration[i][j] == 'n', Or([tower_cannons[index[0] + k][dir] == k for k, dir in zip([4, 4], ['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
+                    And(configuration[i][j] == 'n', Or([tower_cannons[index[0] + k][dir] == k for k, dir in zip([1, 1], ['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
+                )
+                s.add(attacker_eliminated)
 
                 # Restrições para evitar que as torres se destruam mutuamente
                 neighbors = [(i-1, j), (i+1, j), (i, j-1), (i, j+1)]
                 for ni, nj in neighbors:
                     if 0 <= ni < rows and 0 <= nj < cols and configuration[ni][nj] == 'T':
-                        neighbor_index = f'tower_{ni}_{nj}'
-                        clauses.append([f'{index}_c', f'{neighbor_index}_c'])
-                        clauses.append([f'{index}_b', f'{neighbor_index}_b'])
-                        clauses.append([f'{index}_d', f'{neighbor_index}_d'])
-                        clauses.append([f'{index}_e', f'{neighbor_index}_e'])
+                        neighbor_index = [(ni * cols + nj) * 4 + k for k in range(4) if (ni * cols + nj) * 4 + k < len(tower_cannons)]
+                        for k, dir in enumerate(['c', 'b', 'd', 'e']):
+                            s.add(Or([tower_cannons[index[0] + k][dir] != tower_cannons[n_idx + k][dir] for n_idx in neighbor_index if n_idx + k < len(tower_cannons)]))
 
-    return clauses
-
-def solve_with_pysat(dimensions, configuration):
-    # Criação da fórmula
-    formula = create_tower_formula(dimensions, configuration)
-
-    print(formula)
-    # Utilização do Glucose3 como solver
-    with Glucose3() as solver:
-        for clause in formula:
-            solver.add_clause(clause)
-
-        # Verifica a satisfatibilidade
-        if solver.solve():
-            model = solver.get_model()
-            return model
-        else:
-            return None
+    # Verifica se é possível satisfazer as restrições
+    if s.check() == sat:
+        model = s.model()
+        # Gera a saída do jogo
+        solution = np.full((rows, cols), '.', dtype=str)
+        for i in range(rows):
+            for j in range(cols):
+                if configuration[i][j] == 'T':
+                    index = [(i * cols + j) * 4 + k for k in range(4) if (i * cols + j) * 4 + k < len(tower_cannons)]
+                    for k, dir in enumerate(['c', 'b', 'd', 'e']):
+                        solution[i][j] = str(model.eval(tower_cannons[index[0] + k][dir]))
+        return solution
+    else:
+        return None  # Não é possível atender a todas as restrições
 
 # Exemplo de uso
-dimensions = (3, 3)
+dimensions = (5, 9)
 configuration = [
-    ['.', 'n', '.'],
-    ['T', '.', 'T'],
-    ['.', 'n', '.']
+    ['.', 'n', '.', '.', 'T', '.', '.', 'n', '.'],
+    ['T', '.', '.', 'n', '.', '.', '.', '.', '.'],
+    ['.', 'n', '.', '.', '#', '.', '.', 'n', '.'],
+    ['.', '.', '.', 'n', '.', '.', 'T', '.', '.'],
+    ['.', 'n', '.', '.', 'T', '.', '.', 'n', '.']
 ]
 
-result = solve_with_pysat(dimensions, configuration)
+result = solve_tower_problem(dimensions, configuration)
 if result is not None:
-    print("Solução encontrada:")
-    for item in result:
-        print(item)
+    for row in result:
+        print(' '.join(row))
 else:
     print("Não é possível atender a todas as restrições.")
