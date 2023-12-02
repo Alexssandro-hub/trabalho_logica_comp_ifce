@@ -22,26 +22,24 @@ def solve_tower_problem(dimensions, configuration):
 
     # Restrições
     for i in range(rows):
-        for j in range(cols):
-            if configuration[i][j] == 'T':
-                # Cada torre atira em pelo menos uma direção
-                s.add(Or(towers_left[i][j] > 0, towers_down[i][j] > 0, towers_right[i][j] > 0, towers_up[i][j] > 0))
+      for j in range(cols):
+          if configuration[i][j] == 'T':
+              #s.add(Or(towers_left[i][j], towers_down[i][j], towers_right[i][j], towers_up[i][j]))
 
-                # Cada configuração de tiro deve eliminar pelo menos um atacante
-                attackers_in_row = Or([towers_left[k][j] > 0 for k in range(rows)] + [towers_up[i][k] > 0 for k in range(cols)])
-                attackers_in_col = Or([towers_left[k][j] > 0 for k in range(rows)] + [towers_up[i][k] > 0 for k in range(cols)])
+              # Cada configuração de tiro deve eliminar pelo menos um atacante
+              attackers_in_row = Or([towers_left[k][j] for k in range(rows) if k != i] + [towers_right[k][j] for k in range(rows) if k != i])
+              attackers_in_col = Or([towers_up[i][k] for k in range(cols) if k != j] + [towers_down[i][k] for k in range(cols) if k != j])
 
-                s.add(Implies(configuration[i][j] == 'n', Or(attackers_in_row, attackers_in_col)))
+              s.add(And(Not(configuration[i][j] == 'n'), Or(attackers_in_row, attackers_in_col))); #Implies(configuration[i][j] == 'n', Or(attackers_in_row, attackers_in_col))
 
-                # Restrições para evitar que as torres se destruam mutuamente
-                neighbors = [(i-1, j), (i+1, j), (i, j-1), (i, j+1)]
-                for ni, nj in neighbors:
-                    if 0 <= ni < rows and 0 <= nj < cols and configuration[ni][nj] == 'T':
-                        for k in range(rows):
-                            s.add(Implies(towers_left[i][j] > 0, towers_left[k][nj] == 0))
-                            s.add(Implies(towers_down[i][j] > 0, towers_down[k][nj] == 0))
-                            s.add(Implies(towers_right[i][j] > 0, towers_right[k][nj] == 0))
-                            s.add(Implies(towers_up[i][j] > 0, towers_up[k][nj] == 0))
+              # Restrições para evitar que as torres se destruam mutuamente
+              neighbors = [(i-1, j), (i+1, j), (i, j-1), (i, j+1)]
+              for ni, nj in neighbors:
+                  if 0 <= ni < rows and 0 <= nj < cols and configuration[ni][nj] == 'T':
+                      s.add(Implies(towers_left[i][j], Not(towers_right[ni][nj])))
+                      s.add(Implies(towers_down[i][j], Not(towers_up[ni][nj])))
+                      s.add(Implies(towers_right[i][j], Not(towers_left[ni][nj])))
+                      s.add(Implies(towers_up[i][j], Not(towers_down[ni][nj])))
 
     # Verifica se é possível satisfazer as restrições
     check_result = s.check()
