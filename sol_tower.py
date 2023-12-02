@@ -11,13 +11,14 @@ def solve_tower_problem(dimensions, configuration):
     towers_right = [[Int(f't{i}_{j}_d') for j in range(cols)] for i in range(rows)]
     towers_up = [[Int(f't{i}_{j}_c') for j in range(cols)] for i in range(rows)]
 
-    # Adiciona cláusulas para garantir que cada torre atire em apenas uma direção
+    # Restrições para garantir que cada torre atire em apenas uma direção
     for i in range(rows):
         for j in range(cols):
-            s.add(Implies(towers_left[i][j] > 0, And(towers_down[i][j] == 0, towers_right[i][j] == 0, towers_up[i][j] == 0)))
-            s.add(Implies(towers_down[i][j] > 0, And(towers_left[i][j] == 0, towers_right[i][j] == 0, towers_up[i][j] == 0)))
-            s.add(Implies(towers_right[i][j] > 0, And(towers_left[i][j] == 0, towers_down[i][j] == 0, towers_up[i][j] == 0)))
-            s.add(Implies(towers_up[i][j] > 0, And(towers_left[i][j] == 0, towers_down[i][j] == 0, towers_right[i][j] == 0)))
+          if configuration[i][j] == 'T':
+            s.add(Xor(towers_left[i][j], towers_down[i][j]))
+            s.add(Xor(towers_down[i][j], towers_right[i][j]))
+            s.add(Xor(towers_right[i][j], towers_up[i][j]))
+            s.add(Xor(towers_up[i][j], towers_left[i][j]))
 
     # Restrições
     for i in range(rows):
