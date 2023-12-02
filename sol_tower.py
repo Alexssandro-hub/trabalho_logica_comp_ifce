@@ -23,30 +23,24 @@ def solve_tower_problem(dimensions, configuration):
     for i in range(rows):
         for j in range(cols):
             if configuration[i][j] == 'T':
-                index = [(i * cols + j) * 4 + k for k in range(4) if (i * cols + j) * 4 + k < len(tower_cannons)]  # Índices para as variáveis do canhão desta torre
-                
-                # Cada torre tem exatamente quatro canhões (cima, baixo, direita, esquerda)
-                for k, dir in enumerate(['c', 'b', 'd', 'e']):
-                    if index and index[0] + k < len(tower_cannons):
-                        s.add(tower_cannons[index[0] + k][dir] >= 1, tower_cannons[index[0] + k][dir] <= 4)
+                # Cada torre atira em pelo menos uma direção
+                s.add(Or(towers_left[i][j] > 0, towers_down[i][j] > 0, towers_right[i][j] > 0, towers_up[i][j] > 0))
 
                 # Cada configuração de tiro deve eliminar pelo menos um atacante
-                attacker_eliminated = Or(
-                    And(configuration[i][j] == 'n', 
-                        Or([Or(tower_cannons[index[0] + k][dir] == k + 1, tower_cannons[index[1] + k][dir] == k + 1) for k, dir in enumerate(['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
-                    And(configuration[i][j] == 'n', 
-                        Or([Or(tower_cannons[index[0] + k][dir] == k + 1, tower_cannons[index[1] + k][dir] == k + 1) for k, dir in enumerate(['d', 'e']) if index and index[0] + k < len(tower_cannons)])),
-                )
+                attackers_in_row = Or([towers_left[k][j] > 0 for k in range(rows)] + [towers_up[i][k] > 0 for k in range(cols)])
+                attackers_in_col = Or([towers_left[k][j] > 0 for k in range(rows)] + [towers_up[i][k] > 0 for k in range(cols)])
 
-                s.add(attacker_eliminated)
+                s.add(Implies(configuration[i][j] == 'n', Or(attackers_in_row, attackers_in_col)))
 
                 # Restrições para evitar que as torres se destruam mutuamente
                 neighbors = [(i-1, j), (i+1, j), (i, j-1), (i, j+1)]
                 for ni, nj in neighbors:
                     if 0 <= ni < rows and 0 <= nj < cols and configuration[ni][nj] == 'T':
-                        neighbor_index = [(ni * cols + nj) * 4 + k for k in range(4) if (ni * cols + nj) * 4 + k < len(tower_cannons)]
-                        for k, dir in enumerate(['c', 'b', 'd', 'e']):
-                            s.add(Or([tower_cannons[index[0] + k][dir] != tower_cannons[n_idx + k][dir] for n_idx in neighbor_index if n_idx + k < len(tower_cannons)]))
+                        for k in range(rows):
+                            s.add(Implies(towers_left[i][j] > 0, towers_left[k][nj] == 0))
+                            s.add(Implies(towers_down[i][j] > 0, towers_down[k][nj] == 0))
+                            s.add(Implies(towers_right[i][j] > 0, towers_right[k][nj] == 0))
+                            s.add(Implies(towers_up[i][j] > 0, towers_up[k][nj] == 0))
 
     # Verifica se é possível satisfazer as restrições
     check_result = s.check()
