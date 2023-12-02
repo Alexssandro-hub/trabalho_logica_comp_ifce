@@ -5,8 +5,19 @@ def solve_tower_problem(dimensions, configuration):
     rows, cols = dimensions
     s = Solver()
 
-    # Criação de uma matriz NumPy para representar as orientações dos canhões
-    tower_cannons = [[Int(f'tower_{i}_{j}_{dir}') for dir in ['c', 'b', 'd', 'e']] for j in range(cols) for i in range(rows) if configuration[i][j] == 'T']
+    # Criação de variáveis proposicionais
+    towers_left = [[Int(f't{i}_{j}_e') for j in range(cols)] for i in range(rows)]
+    towers_down = [[Int(f't{i}_{j}_b') for j in range(cols)] for i in range(rows)]
+    towers_right = [[Int(f't{i}_{j}_d') for j in range(cols)] for i in range(rows)]
+    towers_up = [[Int(f't{i}_{j}_c') for j in range(cols)] for i in range(rows)]
+
+    # Adiciona cláusulas para garantir que cada torre atire em apenas uma direção
+    for i in range(rows):
+        for j in range(cols):
+            s.add(Implies(towers_left[i][j] > 0, And(towers_down[i][j] == 0, towers_right[i][j] == 0, towers_up[i][j] == 0)))
+            s.add(Implies(towers_down[i][j] > 0, And(towers_left[i][j] == 0, towers_right[i][j] == 0, towers_up[i][j] == 0)))
+            s.add(Implies(towers_right[i][j] > 0, And(towers_left[i][j] == 0, towers_down[i][j] == 0, towers_up[i][j] == 0)))
+            s.add(Implies(towers_up[i][j] > 0, And(towers_left[i][j] == 0, towers_down[i][j] == 0, towers_right[i][j] == 0)))
 
     # Restrições
     for i in range(rows):
