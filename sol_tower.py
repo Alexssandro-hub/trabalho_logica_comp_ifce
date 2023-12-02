@@ -52,9 +52,18 @@ def solve_tower_problem(dimensions, configuration):
         for i in range(rows):
             for j in range(cols):
                 if configuration[i][j] == 'T':
-                    index = [(i * cols + j) * 4 + k for k in range(4) if (i * cols + j) * 4 + k < len(tower_cannons)]
-                    for k, dir in enumerate(['c', 'b', 'd', 'e']):
-                        solution[i][j] = str(model.eval(tower_cannons[index[0] + k][dir]))
+                    if is_true(model.eval(towers_left[i][j] > 0)):
+                        solution[i][j] = '1'
+                    elif is_true(model.eval(towers_down[i][j] > 0)):
+                        solution[i][j] = '2'
+                    elif is_true(model.eval(towers_right[i][j] > 0)):
+                        solution[i][j] = '3'
+                    elif is_true(model.eval(towers_up[i][j] > 0)):
+                        solution[i][j] = '4'
+                elif configuration[i][j] == '#':
+                    solution[i][j] = '#'
+                elif configuration[i][j] == 'n':
+                    solution[i][j] = 'n'
         return solution
     else:
         print(f"Não foi possível satisfazer as restrições. Resultado do check: {check_result}")
