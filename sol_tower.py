@@ -21,11 +21,12 @@ def solve_tower_problem(dimensions, configuration):
 
                 # Cada configuração de tiro deve eliminar pelo menos um atacante
                 attacker_eliminated = Or(
-                    And(configuration[i][j] == 'n', Or([tower_cannons[index[0] + k][dir] == k for k, dir in zip([2, 2], ['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
-                    And(configuration[i][j] == 'n', Or([tower_cannons[index[0] + k][dir] == k for k, dir in zip([3, 3], ['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
-                    And(configuration[i][j] == 'n', Or([tower_cannons[index[0] + k][dir] == k for k, dir in zip([4, 4], ['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
-                    And(configuration[i][j] == 'n', Or([tower_cannons[index[0] + k][dir] == k for k, dir in zip([1, 1], ['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
+                    And(configuration[i][j] == 'n', 
+                        Or([Or(tower_cannons[index[0] + k][dir] == k + 1, tower_cannons[index[1] + k][dir] == k + 1) for k, dir in enumerate(['c', 'b']) if index and index[0] + k < len(tower_cannons)])),
+                    And(configuration[i][j] == 'n', 
+                        Or([Or(tower_cannons[index[0] + k][dir] == k + 1, tower_cannons[index[1] + k][dir] == k + 1) for k, dir in enumerate(['d', 'e']) if index and index[0] + k < len(tower_cannons)])),
                 )
+
                 s.add(attacker_eliminated)
 
                 # Restrições para evitar que as torres se destruam mutuamente
@@ -37,7 +38,9 @@ def solve_tower_problem(dimensions, configuration):
                             s.add(Or([tower_cannons[index[0] + k][dir] != tower_cannons[n_idx + k][dir] for n_idx in neighbor_index if n_idx + k < len(tower_cannons)]))
 
     # Verifica se é possível satisfazer as restrições
-    if s.check() == sat:
+    check_result = s.check()
+
+    if check_result == sat:
         model = s.model()
         # Gera a saída do jogo
         solution = np.full((rows, cols), '.', dtype=str)
@@ -49,7 +52,8 @@ def solve_tower_problem(dimensions, configuration):
                         solution[i][j] = str(model.eval(tower_cannons[index[0] + k][dir]))
         return solution
     else:
-        return None  # Não é possível atender a todas as restrições
+        print(f"Não foi possível satisfazer as restrições. Resultado do check: {check_result}")
+        return None
 
 # Exemplo de uso
 dimensions = (5, 9)
