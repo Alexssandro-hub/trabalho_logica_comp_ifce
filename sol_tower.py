@@ -6,12 +6,12 @@ def solve_tower_problem(dimensions, configuration):
     s = Solver()
 
     # Criação de variáveis proposicionais
-    towers_left = [[Int(f't{i}_{j}_e') for j in range(cols)] for i in range(rows)]
-    towers_down = [[Int(f't{i}_{j}_b') for j in range(cols)] for i in range(rows)]
-    towers_right = [[Int(f't{i}_{j}_d') for j in range(cols)] for i in range(rows)]
-    towers_up = [[Int(f't{i}_{j}_c') for j in range(cols)] for i in range(rows)]
+    towers_left = [[Bool(f't{i}_{j}_e') for j in range(cols)] for i in range(rows)]
+    towers_down = [[Bool(f't{i}_{j}_b') for j in range(cols)] for i in range(rows)]
+    towers_right = [[Bool(f't{i}_{j}_d') for j in range(cols)] for i in range(rows)]
+    towers_up = [[Bool(f't{i}_{j}_c') for j in range(cols)] for i in range(rows)]
 
-    # Restrições para garantir que cada torre atire em apenas uma direção
+    # Restrições para garantir que cada torre atire em apenas duas direção
     for i in range(rows):
         for j in range(cols):
           if configuration[i][j] == 'T':
@@ -39,25 +39,29 @@ def solve_tower_problem(dimensions, configuration):
                       s.add(Implies(And(towers_right[i][j], towers_up[i][j]), Not(And(towers_left[ni][nj], towers_down[ni][nj])))) #towers_right[i][j], towers_left[ni][nj]
                       s.add(Implies(And(towers_up[i][j], towers_left[i][j]), Not(And(towers_down[ni][nj], towers_right[ni][nj])))) #towers_up[i][j], towers_down[ni][nj]
 
-    # Verifica se é possível satisfazer as restrições
     check_result = s.check()
 
     if check_result == sat:
         model = s.model()
-        # Gera a saída do jogo
         solution = np.full((rows, cols), '.', dtype=str)
-        
+       
         for i in range(rows):
             for j in range(cols):
                 if configuration[i][j] == 'T':
-                    if is_true(model.eval(towers_down[i][j])) or is_true(model.eval(towers_left[i][j])):
+                    if ((is_true(model.eval(towers_down[i][j])) and (not is_true(model.eval(towers_left[i][j])))) and
+                        ((not is_true(model.eval(towers_down[i][j]))) and is_true(model.eval(towers_left[i][j])))):
                         solution[i][j] = '1'
-                    if is_true(model.eval(towers_right[i][j])) or is_true(model.eval(towers_down[i][j])):
+
+                    elif ((is_true(model.eval(towers_right[i][j])) and (not is_true(model.eval(towers_down[i][j])))) and 
+                          ((not is_true(model.eval(towers_right[i][j]))) and is_true(model.eval(towers_down[i][j])))):
                         solution[i][j] = '2'
-                    if is_true(model.eval(towers_up[i][j])) or is_true(model.eval(towers_right[i][j])):
+
+                    elif ((is_true(model.eval(towers_up[i][j])) and (not is_true(model.eval(towers_right[i][j])))) or
+                          ((not is_true(model.eval(towers_up[i][j]))) and is_true(model.eval(towers_right[i][j])))):
                         solution[i][j] = '3'
-                    if is_true(model.eval(towers_left[i][j])) or is_true(model.eval(towers_up[i][j])):
-                        solution[i][j] = '4'
+
+                    else: solution[i][j] = '4'
+                        
                 elif configuration[i][j] == '#':
                     solution[i][j] = '#'
                 elif configuration[i][j] == 'n':
@@ -67,7 +71,7 @@ def solve_tower_problem(dimensions, configuration):
         print(f"Não foi possível satisfazer as restrições. Resultado do check: {check_result}")
         return None
 
-# Exemplo de uso
+
 dimensions = (5, 9)
 configuration = [
     ['.', 'n', '.', '.', 'T', '.', '.', 'n', '.'],
