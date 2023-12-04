@@ -48,11 +48,11 @@ def solve_tower_problem(dimensions, configuration):
         for i in range(rows):
             for j in range(cols):
                 if configuration[i][j] == 'T':
-                    if ((is_true(model.eval(towers_down[i][j])) and (not is_true(model.eval(towers_left[i][j])))) and
+                    if ((is_true(model.eval(towers_down[i][j])) and (not is_true(model.eval(towers_left[i][j])))) or
                         ((not is_true(model.eval(towers_down[i][j]))) and is_true(model.eval(towers_left[i][j])))):
                         solution[i][j] = '1'
 
-                    elif ((is_true(model.eval(towers_right[i][j])) and (not is_true(model.eval(towers_down[i][j])))) and 
+                    elif ((is_true(model.eval(towers_right[i][j])) and (not is_true(model.eval(towers_down[i][j])))) or 
                           ((not is_true(model.eval(towers_right[i][j]))) and is_true(model.eval(towers_down[i][j])))):
                         solution[i][j] = '2'
 
